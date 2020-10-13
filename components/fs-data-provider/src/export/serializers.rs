@@ -1,7 +1,27 @@
-use crate::error::Error;
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 use crate::manifest::SyntaxOption;
 use std::io;
 use std::ops::Deref;
+
+/// An Error type specifically for the Serializer that doesn't carry filenames
+pub enum Error {
+    Io(io::Error),
+    Serializer(erased_serde::Error),
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Self::Io(err)
+    }
+}
+
+impl From<erased_serde::Error> for Error {
+    fn from(err: erased_serde::Error) -> Self {
+        Self::Serializer(err)
+    }
+}
 
 /// A simple serializer trait that works on whole objects.
 pub trait Serializer: Deref<Target = SyntaxOption> {

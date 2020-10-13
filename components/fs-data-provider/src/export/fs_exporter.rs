@@ -1,7 +1,11 @@
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 use super::aliasing::{self, AliasCollection};
 use super::serializers::Serializer;
 use crate::error::Error;
 use crate::manifest::AliasOption;
+use crate::manifest::LocalesOption;
 use crate::manifest::Manifest;
 use crate::manifest::SyntaxOption;
 use crate::manifest::MANIFEST_FILE;
@@ -29,21 +33,21 @@ pub enum OverwriteOption {
 pub struct ExporterOptions {
     /// Directory in the filesystem to write output.
     pub root: PathBuf,
+    /// Strategy for including locales.
+    pub locales: LocalesOption,
     /// Strategy for de-duplicating locale data.
     pub aliasing: AliasOption,
     /// Option for initializing the output directory.
     pub overwrite: OverwriteOption,
-    /// Whether to print progress to stdout.
-    pub verbose: bool,
 }
 
 impl Default for ExporterOptions {
     fn default() -> Self {
         Self {
             root: PathBuf::from("icu4x_data"),
+            locales: LocalesOption::IncludeAll,
             aliasing: AliasOption::NoAliases,
             overwrite: OverwriteOption::CheckEmpty,
-            verbose: false,
         }
     }
 }
@@ -54,7 +58,6 @@ pub struct FilesystemExporter {
     root: PathBuf,
     manifest: Manifest,
     alias_collection: Option<AliasCollection<Vec<u8>>>,
-    verbose: bool,
     serializer: Box<dyn Serializer>,
 }
 
@@ -75,49 +78,59 @@ impl DataExporter for FilesystemExporter {
         let mut path_buf = self.root.clone();
         path_buf.extend(req.data_key.get_components().iter());
         path_buf.extend(req.data_entry.get_components().iter());
-        if self.verbose {
-            println!("Initializing: {}", path_buf.to_string_lossy());
+        log::trace!("Writing: {}", req);
+        self.write_to_path(path_buf, obj)?;
+        Ok(())
+    }
+
+    fn includes(&self, data_entry: &DataEntry) -> bool {
+        match self.manifest.locales {
+            LocalesOption::IncludeAll => true,
+            LocalesOption::IncludeList(ref list) => list.contains(&data_entry.langid),
         }
-        self.write_to_path(path_buf, obj)
     }
 }
 
 impl FilesystemExporter {
     pub fn try_new(
         serializer: Box<dyn Serializer>,
-        options: &ExporterOptions,
+        options: ExporterOptions,
     ) -> Result<Self, Error> {
         let result = FilesystemExporter {
-            root: options.root.to_path_buf(),
+            root: options.root,
             manifest: Manifest {
                 aliasing: options.aliasing,
+                locales: options.locales,
                 syntax: SyntaxOption::Json,
             },
             alias_collection: None,
-            verbose: options.verbose,
             serializer,
         };
 
         match options.overwrite {
             OverwriteOption::CheckEmpty => {
-                if options.root.exists() {
-                    fs::remove_dir(&options.root)?;
+                if result.root.exists() {
+                    fs::remove_dir(&result.root).map_err(|e| (e, &result.root))?;
                 }
             }
             OverwriteOption::RemoveAndReplace => {
-                if options.root.exists() {
-                    fs::remove_dir_all(&options.root)?;
+                if result.root.exists() {
+                    fs::remove_dir_all(&result.root).map_err(|e| (e, &result.root))?;
                 }
             }
         };
-        fs::create_dir_all(&options.root)?;
+        fs::create_dir_all(&result.root).map_err(|e| (e, &result.root))?;
 
         let mut manifest_path = result.root.to_path_buf();
         manifest_path.push(MANIFEST_FILE);
-        let mut manifest_file = fs::File::create(manifest_path)?;
+        let mut manifest_file =
+            fs::File::create(&manifest_path).map_err(|e| (e, &manifest_path))?;
         let mut manifest_writer = serde_json::Serializer::pretty(&mut manifest_file);
-        result.manifest.serialize(&mut manifest_writer)?;
-        writeln!(&mut manifest_file)?;
+        result
+            .manifest
+            .serialize(&mut manifest_writer)
+            .map_err(|e| (e, &manifest_path))?;
+        writeln!(&mut manifest_file).map_err(|e| (e, &manifest_path))?;
         Ok(result)
     }
 
@@ -134,20 +147,24 @@ impl FilesystemExporter {
         &mut self,
         mut path_buf: PathBuf,
         obj: &dyn erased_serde::Serialize,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Error> {
         let file_extension = self.serializer.get_file_extension();
         match self.manifest.aliasing {
             AliasOption::NoAliases => {
                 path_buf.set_extension(file_extension);
                 if let Some(parent_dir) = path_buf.parent() {
-                    fs::create_dir_all(&parent_dir)?;
+                    fs::create_dir_all(&parent_dir).map_err(|e| (e, parent_dir))?;
                 }
-                let mut file = fs::File::create(&path_buf)?;
-                self.serializer.serialize(obj, &mut file)?;
+                let mut file = fs::File::create(&path_buf).map_err(|e| (e, &path_buf))?;
+                self.serializer
+                    .serialize(obj, &mut file)
+                    .map_err(|e| (e, &path_buf))?;
             }
             AliasOption::Symlink => {
                 let mut buf: Vec<u8> = Vec::new();
-                self.serializer.serialize(obj, &mut buf)?;
+                self.serializer
+                    .serialize(obj, &mut buf)
+                    .map_err(Error::from_serializers_error)?;
                 let mut alias_root = path_buf.clone();
                 assert!(alias_root.pop());
                 self.alias_collection

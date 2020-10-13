@@ -1,3 +1,6 @@
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 use crate::parser::{parse_locale, ParserError};
 use crate::{extensions, subtags, LanguageIdentifier};
 use std::fmt::Write;
@@ -63,7 +66,7 @@ use std::str::FromStr;
 /// assert_eq!(loc.variants.get(0).unwrap(), "valencia");
 /// ```
 /// [`Unicode Locale Identifier`]: https://unicode.org/reports/tr35/tr35.html#Unicode_locale_identifier
-#[derive(Default, Debug, PartialEq, Eq, Clone, Hash, PartialOrd, Ord)]
+#[derive(Default, PartialEq, Eq, Clone, Hash, PartialOrd, Ord)]
 pub struct Locale {
     /// Language subtag of the Locale
     pub language: subtags::Language,
@@ -144,6 +147,12 @@ impl From<Locale> for LanguageIdentifier {
     }
 }
 
+impl std::fmt::Debug for Locale {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self, f)
+    }
+}
+
 impl std::fmt::Display for Locale {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         self.language.fmt(f)?;
@@ -167,5 +176,11 @@ impl std::fmt::Display for Locale {
 impl PartialEq<&str> for Locale {
     fn eq(&self, other: &&str) -> bool {
         self.to_string().eq(*other)
+    }
+}
+
+impl PartialEq<str> for Locale {
+    fn eq(&self, other: &str) -> bool {
+        self.to_string().eq(other)
     }
 }

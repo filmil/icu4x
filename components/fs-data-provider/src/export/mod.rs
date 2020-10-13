@@ -1,3 +1,6 @@
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 //! The `export` feature enables you to pull all data from some other data provider and persist it
 //! on the filesystem to be read by an FsDataProvider at runtime.
 //!
@@ -23,7 +26,7 @@
 //! let json_serializer = Box::new(serializers::JsonSerializer::new(&options));
 //! let mut options = fs_exporter::ExporterOptions::default();
 //! options.root = DEMO_PATH.clone();
-//! let mut exporter = fs_exporter::FilesystemExporter::try_new(json_serializer, &options)
+//! let mut exporter = fs_exporter::FilesystemExporter::try_new(json_serializer, options)
 //!     .expect("Should successfully initialize data output directory");
 //!
 //! // Export a key
@@ -42,7 +45,7 @@
 //!     data_key: DATA_KEY,
 //!     data_entry: DataEntry {
 //!         variant: None,
-//!         langid: "und".parse().unwrap(),
+//!         langid: Default::default(),
 //!     }
 //! };
 //! let inv_response = inv_provider.load(&req).unwrap();

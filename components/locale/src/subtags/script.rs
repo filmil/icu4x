@@ -1,3 +1,6 @@
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 use crate::parser::errors::ParserError;
 use std::str::FromStr;
 use tinystr::TinyStr4;
@@ -46,6 +49,49 @@ impl Script {
             return Err(ParserError::InvalidSubtag);
         }
         Ok(Self(s.to_ascii_titlecase()))
+    }
+
+    /// Deconstructs the `Script` into raw format to be consumed
+    /// by `from_raw_unchecked`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use icu_locale::subtags::Script;
+    ///
+    /// let script = Script::from_bytes(b"Latn")
+    ///     .expect("Parsing failed.");
+    ///
+    /// let raw = script.into_raw();
+    /// let script = unsafe { Script::from_raw_unchecked(raw) };
+    /// assert_eq!(script, "Latn");
+    /// ```
+    pub fn into_raw(self) -> u32 {
+        self.0.into()
+    }
+
+    /// Constructor which takes a raw value returned by
+    /// `into_raw`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use icu_locale::subtags::Script;
+    ///
+    /// let script = Script::from_bytes(b"Latn")
+    ///     .expect("Parsing failed.");
+    ///
+    /// let raw = script.into_raw();
+    /// let script = unsafe { Script::from_raw_unchecked(raw) };
+    /// assert_eq!(script, "Latn");
+    /// ```
+    ///
+    /// # Safety
+    ///
+    /// This function accepts a `u32` that is expected to be a valid `TinyStr4`
+    /// representing a `Script` subtag in canonical syntax.
+    pub const unsafe fn from_raw_unchecked(v: u32) -> Self {
+        Self(TinyStr4::new_unchecked(v))
     }
 
     /// A helper function for displaying

@@ -1,13 +1,20 @@
+# This file is part of ICU4X. For terms of use, please see the file
+# called LICENSE at the top level of the ICU4X source tree
+# (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 [workspace]
 
 members = [
     "components/cldr-json-data-provider",
     "components/data-provider",
+    "components/datetime",
+    "components/ecma402",
     "components/fs-data-provider",
     "components/icu",
     "components/icu4x",
-    "components/uniset",
     "components/locale",
-    "components/num-util",
-    "components/pluralrules",
+    "components/locale/macros",
+    "components/plurals",
+    "components/uniset",
+    "resources/testdata",
+    "utils/fixed-decimal",
 ]

@@ -1,3 +1,6 @@
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 use crate::CldrPaths;
 use icu_data_provider::iter::DataEntryCollection;
 use icu_data_provider::prelude::*;
@@ -8,6 +11,7 @@ pub(crate) trait DataKeySupport {
     fn supports_key(data_key: &DataKey) -> Result<(), DataError>;
 }
 
+#[derive(Debug)]
 pub(crate) struct LazyCldrProvider<T> {
     src: RwLock<Option<T>>,
 }
@@ -28,14 +32,14 @@ fn map_poison<E>(_err: E) -> DataError {
 /// A lazy-initialized CLDR JSON data provider.
 impl<'b, 'd, T> LazyCldrProvider<T>
 where
-    T: DataProvider<'d> + DataKeySupport + DataEntryCollection + TryFrom<&'b CldrPaths>,
-    <T as TryFrom<&'b CldrPaths>>::Error: 'static + std::error::Error,
+    T: DataProvider<'d> + DataKeySupport + DataEntryCollection + TryFrom<&'b dyn CldrPaths>,
+    <T as TryFrom<&'b dyn CldrPaths>>::Error: 'static + std::error::Error,
 {
     /// Call T::load, initializing T if necessary.
     pub fn try_load(
         &self,
         req: &DataRequest,
-        cldr_paths: &'b CldrPaths,
+        cldr_paths: &'b dyn CldrPaths,
     ) -> Result<Option<DataResponse<'d>>, DataError> {
         if T::supports_key(&req.data_key).is_err() {
             return Ok(None);
@@ -57,7 +61,7 @@ where
     pub fn try_iter(
         &self,
         data_key: &DataKey,
-        cldr_paths: &'b CldrPaths,
+        cldr_paths: &'b dyn CldrPaths,
     ) -> Result<Option<Box<dyn Iterator<Item = DataEntry>>>, DataError> {
         if T::supports_key(data_key).is_err() {
             return Ok(None);

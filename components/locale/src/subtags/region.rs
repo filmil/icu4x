@@ -1,3 +1,6 @@
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 use crate::parser::errors::ParserError;
 use std::str::FromStr;
 use tinystr::TinyStr4;
@@ -55,6 +58,49 @@ impl Region {
             }
             _ => Err(ParserError::InvalidSubtag),
         }
+    }
+
+    /// Deconstructs the `Region` into raw format to be consumed
+    /// by `from_raw_unchecked`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use icu_locale::subtags::Region;
+    ///
+    /// let region = Region::from_bytes(b"us")
+    ///     .expect("Parsing failed.");
+    ///
+    /// let raw = region.into_raw();
+    /// let region = unsafe { Region::from_raw_unchecked(raw) };
+    /// assert_eq!(region, "US");
+    /// ```
+    pub fn into_raw(self) -> u32 {
+        self.0.into()
+    }
+
+    /// Constructor which takes a raw value returned by
+    /// `into_raw`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use icu_locale::subtags::Region;
+    ///
+    /// let region = Region::from_bytes(b"us")
+    ///     .expect("Parsing failed.");
+    ///
+    /// let raw = region.into_raw();
+    /// let region = unsafe { Region::from_raw_unchecked(raw) };
+    /// assert_eq!(region, "US");
+    /// ```
+    ///
+    /// # Safety
+    ///
+    /// This function accepts a `u32` that is expected to be a valid `TinyStr4`
+    /// representing a `Region` subtag in canonical syntax.
+    pub const unsafe fn from_raw_unchecked(v: u32) -> Self {
+        Self(TinyStr4::new_unchecked(v))
     }
 
     /// A helper function for displaying

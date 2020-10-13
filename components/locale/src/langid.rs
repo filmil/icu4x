@@ -1,3 +1,6 @@
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 use std::fmt::Write;
 use std::str::FromStr;
 
@@ -50,7 +53,7 @@ use crate::subtags;
 /// ```
 ///
 /// [`Unicode BCP47 Language Identifier`]: https://unicode.org/reports/tr35/tr35.html#Unicode_language_identifier
-#[derive(Default, Debug, PartialEq, Eq, Clone, Hash, PartialOrd, Ord)]
+#[derive(Default, PartialEq, Eq, Clone, Hash, PartialOrd, Ord)]
 pub struct LanguageIdentifier {
     /// Language subtag of the LanguageIdentifier
     pub language: subtags::Language,
@@ -118,6 +121,12 @@ impl LanguageIdentifier {
     }
 }
 
+impl std::fmt::Debug for LanguageIdentifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self, f)
+    }
+}
+
 impl FromStr for LanguageIdentifier {
     type Err = ParserError;
 
@@ -148,5 +157,11 @@ impl std::fmt::Display for LanguageIdentifier {
 impl PartialEq<&str> for LanguageIdentifier {
     fn eq(&self, other: &&str) -> bool {
         self.to_string().eq(*other)
+    }
+}
+
+impl PartialEq<str> for LanguageIdentifier {
+    fn eq(&self, other: &str) -> bool {
+        self.to_string().eq(other)
     }
 }

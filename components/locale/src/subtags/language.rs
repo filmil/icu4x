@@ -1,3 +1,6 @@
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 use super::script::SCRIPT_LENGTH;
 use crate::parser::errors::ParserError;
 use std::ops::RangeInclusive;
@@ -65,6 +68,52 @@ impl Language {
         } else {
             Ok(Self(Some(value)))
         }
+    }
+
+    /// Deconstructs the `Language` into raw format to be consumed
+    /// by `from_raw_unchecked`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use icu_locale::subtags::Language;
+    ///
+    /// let lang = Language::from_bytes(b"en")
+    ///     .expect("Parsing failed.");
+    ///
+    /// let raw = lang.into_raw();
+    /// let lang = unsafe { Language::from_raw_unchecked(raw) };
+    /// assert_eq!(lang, "en");
+    /// ```
+    pub fn into_raw(self) -> Option<u64> {
+        self.0.map(Into::<u64>::into)
+    }
+
+    /// Constructor which takes a raw value returned by
+    /// `into_raw`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use icu_locale::subtags::Language;
+    ///
+    /// let lang = Language::from_bytes(b"en")
+    ///     .expect("Parsing failed.");
+    ///
+    /// let raw = lang.into_raw();
+    /// let lang = unsafe { Language::from_raw_unchecked(raw) };
+    /// assert_eq!(lang, "en");
+    /// ```
+    ///
+    /// # Safety
+    ///
+    /// This function accepts a `u64` that is expected to be a valid `TinyStr8`
+    /// representing a `Language` subtag in canonical syntax.
+    pub const unsafe fn from_raw_unchecked(v: Option<u64>) -> Self {
+        Self(match v {
+            Some(v) => Some(TinyStr8::new_unchecked(v)),
+            None => None,
+        })
     }
 
     /// A helper function for displaying

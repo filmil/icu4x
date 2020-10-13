@@ -1,3 +1,6 @@
+// This file is part of ICU4X. For terms of use, please see the file
+// called LICENSE at the top level of the ICU4X source tree
+// (online at: https://github.com/unicode-org/icu4x/blob/master/LICENSE ).
 use crate::error::Error;
 use crate::reader::open_reader;
 use crate::support::DataKeySupport;
@@ -5,7 +8,7 @@ use crate::CldrPaths;
 use icu_data_provider::iter::DataEntryCollection;
 use icu_data_provider::prelude::*;
 use icu_data_provider::structs::plurals::*;
-use icu_pluralrules::rules::{parse, serialize};
+use icu_plurals::rules::{parse, serialize};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::marker::PhantomData;
@@ -18,25 +21,25 @@ pub struct PluralsProvider<'d> {
     _phantom: PhantomData<&'d ()>, // placeholder for when we need the lifetime param
 }
 
-impl TryFrom<&CldrPaths> for PluralsProvider<'_> {
+impl TryFrom<&dyn CldrPaths> for PluralsProvider<'_> {
     type Error = Error;
-    fn try_from(cldr_paths: &CldrPaths) -> Result<Self, Self::Error> {
+    fn try_from(cldr_paths: &dyn CldrPaths) -> Result<Self, Self::Error> {
         let cardinal_rules = {
             let path = cldr_paths
-                .cldr_core
-                .clone()?
+                .cldr_core()?
                 .join("supplemental")
                 .join("plurals.json");
-            let data: cldr_json::Resource = serde_json::from_reader(open_reader(path)?)?;
+            let data: cldr_json::Resource =
+                serde_json::from_reader(open_reader(&path)?).map_err(|e| (e, path))?;
             data.supplemental.plurals_type_cardinal
         };
         let ordinal_rules = {
             let path = cldr_paths
-                .cldr_core
-                .clone()?
+                .cldr_core()?
                 .join("supplemental")
                 .join("ordinals.json");
-            let data: cldr_json::Resource = serde_json::from_reader(open_reader(path)?)?;
+            let data: cldr_json::Resource =
+                serde_json::from_reader(open_reader(&path)?).map_err(|e| (e, path))?;
             data.supplemental.plurals_type_ordinal
         };
         Ok(PluralsProvider {
@@ -185,6 +188,7 @@ pub(self) mod cldr_json {
 
 #[test]
 fn test_basic() {
+    use icu_locale_macros::langid;
     use std::borrow::Borrow;
 
     let json_str = std::fs::read_to_string("tests/testdata/plurals.json").unwrap();
@@ -196,7 +200,7 @@ fn test_basic() {
             data_key: icu_data_key!(plurals: cardinal@1),
             data_entry: DataEntry {
                 variant: None,
-                langid: "cs".parse().unwrap(),
+                langid: langid!("cs"),
             },
         })
         .unwrap()
